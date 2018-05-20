@@ -2,6 +2,8 @@ import os
 import sys
 import numpy as np
 import glob
+
+MAX_LEN = 49
 def proc(addr):
     os.chdir(os.path.abspath("./data_thchs30/" + addr))
     names = glob.glob(os.path.abspath("*.wav"))
@@ -17,6 +19,11 @@ def proc(addr):
                 continue
             else:
                 words_arr.append(ord(w))
+        words_arr.append(1) # end of sentence marker
+        words_arr = np.asanyarray(words_arr)
+        n = len(words_arr)
+        pad = MAX_LEN - n
+        words_arr = np.concatenate((words_arr, np.zeros(pad)))
         writename = name + ".zh"
         np.savetxt(writename, words_arr, delimiter= ',', fmt='%.8e')
         if cnt%100 == 0:
