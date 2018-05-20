@@ -1,22 +1,30 @@
 import tensorflow as tf 
 import glob
 import os
-
+import numpy as np
 # making data (data in ./data_thchs30/dev)
 os.chdir(os.path.abspath("./data_thchs30/dev"))
-sounds = glob.glob(os.path.abspath("*.wav"))
+sound_names = glob.glob(os.path.abspath("*.wav"))
+sound_list = []
+label_list = []
 labels = []
-for s in sounds:
+sounds = []
+for s in sound_names:
   s = s + ".trn"
   with open(s, encoding = "utf8") as f:
     name = f.readline()
     label = name[:-5] + ".zh"
-    labels.append(os.path.abspath(label))
+    sound = name[:-5] + ".data"
+    label_list.append(label)
+    sound_list.append(sound)
+    labels.append(np.loadtxt(label))
+    sounds.append(np.loadtxt(sound))
 
-sounds_queue = tf.train.string_input_producer(sounds)
-labels_queue = tf.train.string_input_producer(labels)
+labels = np.asarray(labels)
+sounds = np.asarray(sounds)
+sounds_data = tf.convert_to_tensor(sounds)
+labels_data = tf.convert_to_tensor(labels)
 
-dataset = (sounds_queue, labels_queue)
 # Parameters
 learning_rate = 0.1
 num_steps = 500
@@ -28,9 +36,8 @@ n_hidden_2 = 256 # 2nd layer number of neurons
 num_input =  10545 
 num_output = 49#
 
-X = tf.placeholder("float", shape=(1, num_input))
-Y = tf.placeholder("float", shape=(1, num_output))
-
+X = tf.placeholder("float", [None, num_input])
+Y = tf.placeholder("float", [None, num_output])
 
 # Store layers weight & bias
 weights = {
@@ -78,9 +85,10 @@ with tf.Session() as sess:
     sess.run(init)
 
     for step in range(1, num_steps+1):
-        batch_x, batch_y = dataset.train.next_batch(batch_size)
+        batch_x, batch_y = tf.train.batch([sounds_data, labels_data],batch_size=batch_size)
+        #batch_x, batch_y = dataset.train.next_batch(batch_size)
         # Run optimization op (backprop)
-        sess.run(train_op, feed_dict={X: batch_x, Y: batch_y})
+        sess.run(train_op, feed_dict={X: batch_x.eval(session=sess), Y: batch_y.eval(session=sess)})
         if step % display_step == 0 or step == 1:
             # Calculate batch loss and accuracy
             loss, acc = sess.run([loss_op, accuracy], feed_dict={X: batch_x,
@@ -90,11 +98,12 @@ with tf.Session() as sess:
                   "{:.3f}".format(acc))
 
     print("Optimization Finished!")
-
+    '''
     # Calculate accuracy
     print("Testing Accuracy:", \
-        sess.run(accuracy, feed_dict={X: sounds_queue,
-                                      Y: labels_queue}))
+        sess.run(accuracy, feed_dict={X: sound_list,
+                                      Y: label_list}))
+    '''
 
 
 
