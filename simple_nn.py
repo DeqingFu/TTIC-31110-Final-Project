@@ -7,14 +7,16 @@ os.chdir(os.path.abspath("./data_thchs30/dev"))
 sounds = glob.glob(os.path.abspath("*.wav"))
 labels = []
 for s in sounds:
-  with open(s) as f:
+  s = s + ".trn"
+  with open(s, encoding = "utf8") as f:
     name = f.readline()
-    label = name + ".zh"
-    labels.append(os.path.abspath(labels))
+    label = name[:-5] + ".zh"
+    labels.append(os.path.abspath(label))
 
 sounds_queue = tf.train.string_input_producer(sounds)
 labels_queue = tf.train.string_input_producer(labels)
-dataset = tf.data.Dataset.from_tensor_slices((sounds_queue,labels_queue))
+
+dataset = (sounds_queue, labels_queue)
 # Parameters
 learning_rate = 0.1
 num_steps = 500
@@ -26,8 +28,8 @@ n_hidden_2 = 256 # 2nd layer number of neurons
 num_input =  10545 
 num_output = 49#
 
-X = tf.placeholder("float", [None, num_input])
-Y = tf.placeholder("int32", [None, num_output])
+X = tf.placeholder("float", shape=(1, num_input))
+Y = tf.placeholder("float", shape=(1, num_output))
 
 
 # Store layers weight & bias
@@ -50,7 +52,7 @@ def neural_net(x):
     # Hidden fully connected layer with 256 neurons
     layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
     # Output fully connected layer with a neuron for each class
-    out_layer = int(tf.matmul(layer_2, weights['out']) + biases['out'])
+    out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
     return out_layer
 
 # Construct model
