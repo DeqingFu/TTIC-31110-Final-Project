@@ -1,17 +1,3 @@
-# Author: Lakshmi Krishnan
-# Email: lkrishn7@ford.com
-
-"""Creates SequenceExamples and stores them in TFRecords format.
-
-Computes spectral features from raw audio waveforms and groups the audio into
-multiple TFRecords files based on their length. The utterances are stored in
-sorted order based on length to allow for sorta-grad implementation.
-
-Note:
-This script can take a few hours to run to compute and store the mfcc
-features on the 100 hour Librispeech dataset.
-
-"""
 import os
 import glob
 import soundfile as sf
@@ -21,29 +7,6 @@ from tqdm import tqdm
 
 
 def make_example(seq_len, spec_feat, labels):
-    ''' Creates a SequenceExample for a single utterance.
-    This function makes a SequenceExample given the sequence length,
-    mfcc features and corresponding transcript.
-    These sequence examples are read using tf.parse_single_sequence_example
-    during training.
-
-    Note: Some of the tf modules used in this function(such as
-    tf.train.Feature) do not have comprehensive documentation in v0.12.
-    This function was put together using the test routines in the
-    tensorflow repo.
-    See: https://github.com/tensorflow/tensorflow/
-    blob/246a3724f5406b357aefcad561407720f5ccb5dc/
-    tensorflow/python/kernel_tests/parsing_ops_test.py
-
-
-    Args:
-        seq_len: integer represents the sequence length in time frames.
-        spec_feat: [TxF] matrix of mfcc features.
-        labels: list of ints representing the encoded transcript.
-    Returns:
-        Serialized sequence example.
-
-    '''
     # Feature lists for the sequential features of the example
     feats_list  = [tf.train.Feature(float_list=tf.train.FloatList(value=spec_feat))]
     feat_dict = {"feats": tf.train.FeatureList(feature=feats_list)}
@@ -64,19 +27,6 @@ def make_example(seq_len, spec_feat, labels):
 
 
 def process_data(partition):
-    """ Reads audio waveform and transcripts from a dataset partition
-    and generates mfcc featues.
-
-    Args:
-        parition - represents the dataset partition name.
-
-    Returns:
-        feats: dict containing mfcc feature per utterance
-        transcripts: dict of lists representing transcript.
-        utt_len: dict of ints holding sequence length of each
-                 utterance in time frames.
-
-    """
     feats = {}
     transcripts = {}
     utt_len = {}  # Required for sorting the utterances based on length
@@ -97,11 +47,6 @@ def process_data(partition):
 
 
 def create_records():
-    """ Pre-processes the raw audio and generates TFRecords.
-    This function computes the mfcc features, encodes string transcripts
-    into integers, and generates sequence examples for each utterance.
-    Multiple sequence records are then written into TFRecord files.
-    """
     for partition in sorted(glob.glob(os.path.abspath(AUDIO_PATH+'/*'))):
         if os.path.basename(partition) in ["data", "README.TXT", "lm_phone", "lm_word", "processed"]:
             continue
@@ -155,8 +100,6 @@ def create_records():
             record_writer.close()
             print('Processed '+str(len(sorted_utts))+' audio files')
 
-# Audio path is the location of the directory that contains the librispeech
-# data partitioned into three folders: dev-clean, train-clean-100, test-clean
 AUDIO_PATH = './data_thchs30/'
 
 if __name__ == '__main__':
