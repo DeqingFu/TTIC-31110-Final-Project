@@ -50,6 +50,40 @@ class LinearND(nn.Module):
         size[-1] = out.size()[-1]
         return out.view(size)
 
+class Attention(nn.Module):
+    def __init__(self, enc_dim, dec_dim, attn_dim=None):
+        """
+        Initialize Attention.
+        ----
+        enc_dim: encoder hidden state dimension
+        dec_dim: decoder hidden state dimension
+        attn_dim: attention feature dimension
+        """
+        super(Attention, self).__init__()
+        self.attn_dim = attn_dim
+        self.enc_dim = enc_dim
+        self.dec_dim = dec_dim
+        self.v = LinearND(self.attn_dim, 1, bias=False)
+        self.W1 = LinearND(self.enc_dim, self.attn_dim, bias=False)
+        self.W2 = nn.Linear(self.dec_dim, self.attn_dim, bias=False)
+
+    def forward(self, eh, dhx, ax=None):
+        """
+        Forward Attention method.
+        ----
+        eh (FloatTensor): the encoder hidden state with
+            shape (batch size, time, hidden dimension).
+        dhx (FloatTensor): one time step of the decoder hidden
+            state with shape (batch size, hidden dimension).
+        ax (FloatTensor): one time step of the attention vector.
+        ----
+        Returns the context vectors (sx) and the corresponding attention alignment (ax)
+        """
+        pax = torch.sum(self.v(nn.functional.tanh(self.W1(eh) + self.W2(dhx))), dim=2)
+        ax = nn.functional.softmax(pax, dim=1)
+        sx = torch.sum(eh * ax.unsqueeze(2), dim=1, keepdim=True)
+        return sx, ax
+
 class Seq2Seq(nn.Module):
 
     def __init__(self, feat_dim, vocab_size, attention, config):
