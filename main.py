@@ -1,4 +1,3 @@
-
 import numpy as np
 import pickle as pkl
 import time
@@ -84,60 +83,60 @@ def main():
     with open("rnn/config.json", "r") as fid:                                                                                                                                                                                                                                      
         config = json.load(fid)
 
-    #random.seed(config["seed"])
-    #np.random.seed(config["seed"])
-    #torch.manual_seed(config["seed"])
-    #
-    #use_cuda = torch.cuda.is_available()
-    #if use_cuda:
-    #    torch.backends.cudnn.deterministic = True
+    random.seed(config["seed"])
+    np.random.seed(config["seed"])
+    torch.manual_seed(config["seed"])
+    
+    use_cuda = torch.cuda.is_available()
+    if use_cuda:
+        torch.backends.cudnn.deterministic = True
 
-    print("Printing RNN")
+    print("Training RNN")
+    print("------------")
     data_cfg = config["data"]
     model_cfg = config["model"]
     opt_cfg = config["optimizer"]
 
     preproc = Preprocessor(data_cfg["train_set"], start_and_end=data_cfg["start_and_end"])
 
-    #train_ldr = make_loader(data_cfg["train_set"], preproc, opt_cfg["batch_size"])
-    #dev_ldr = make_loader(data_cfg["dev_set"], preproc, opt_cfg["batch_size"])
+    train_ldr = make_loader(data_cfg["train_set"], preproc, opt_cfg["batch_size"])
+    dev_ldr = make_loader(data_cfg["dev_set"], preproc, opt_cfg["batch_size"])
 
     attention = Attention(model_cfg["encoder"]["hidden_size"], model_cfg["decoder"]["hidden_size"])
     model = Seq2Seq(preproc.input_dim, preproc.vocab_size, attention, model_cfg)
-    #model = model.cuda() if use_cuda else model.cpu()
+    model = model.cuda() if use_cuda else model.cpu()
 
     optimizer = torch.optim.SGD(model.parameters(), lr=opt_cfg["learning_rate"], momentum=opt_cfg["momentum"])
 
-    print(model)
+    #print(model)
     
-    #log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} with {:6.2f}% WER ({:6.2f}s elapsed)"
+    log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} with {:6.2f}% WER ({:6.2f}s elapsed)"
 
-    #best_so_far = float("inf")
-    #for ep in range(opt_cfg["max_epochs"]):
-    #    start = time.time()
-    #    
-    #    train_loss = train(model, optimizer, train_ldr)    
-    #    dev_loss, dev_wer = evaluate(model, dev_ldr, preproc)
-    #    
-    #    print(log.format(ep + 1, train_loss, dev_loss, dev_wer * 100., time.time() - start))
-    #    
-    #    torch.save(model, os.path.join(config["save_path"], str(ep)))
-    #    
-    #    if dev_wer < best_so_far:
-    #        best_so_far = dev_wer
-    #        torch.save(model, os.path.join(config["save_path"], "best"))
+    best_so_far = float("inf")
+    for ep in range(opt_cfg["max_epochs"]):
+        start = time.time()
+        
+        train_loss = train(model, optimizer, train_ldr)    
+        dev_loss, dev_wer = evaluate(model, dev_ldr, preproc)
+        
+        print(log.format(ep + 1, train_loss, dev_loss, dev_wer * 100., time.time() - start))
+    
+        torch.save(model, os.path.join(config["save_path"], str(ep)))
+        
+        if dev_wer < best_so_far:
+            best_so_far = dev_wer
+            torch.save(model, os.path.join(config["save_path"], "best"))
 
 
     # Testing goes here:
+    print("\nTesting RNN")
+    print("-------------")
+    test_model = torch.load(os.path.join(config["save_path"], "best_0.8.16.0.5"))
+    test_ldr = make_loader(data_cfg["test_set"], preproc, opt_cfg["batch_size"])
 
+    _, test_wer = evaluate(test_model, test_ldr, preproc)
 
-    #print("Testing RNN")
-    #test_model = torch.load(os.path.join(config["save_path"], "best_0.8.16.0.5"))
-    #test_ldr = make_loader(data_cfg["test_set"], preproc, opt_cfg["batch_size"])
+    print("{:.2f}% WER (test)".format(test_wer * 100.))
 
-    #_, test_wer = evaluate(test_model, test_ldr, preproc)
-
-    #print("{:.2f}% WER (test)".format(test_wer * 100.))
-
-if __name__ == __main__:
+if __name__ == '__main__':
     main()

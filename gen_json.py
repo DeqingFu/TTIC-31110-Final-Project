@@ -41,10 +41,11 @@ def gen_json():
       d["duration"] = duration
       js.append(d)
       
-    os.chdir(os.path.abspath("../../data/partitions"))
+    os.chdir(os.path.abspath("../../rnn/data/partitions"))
     with open(part + ".json", "w") as outfile:
-      outfile.write(json.dumps(js))
-    os.chdir(os.path.abspath("../../"))
+      for j in js:
+        outfile.write(json.dumps(j)+'\n')
+    os.chdir(os.path.abspath("../../../"))
 
 def move_data():
   partitions = ["test", "train", "dev"]
@@ -54,7 +55,7 @@ def move_data():
     path = os.path.abspath(os.path.join(main_path, part))
     os.chdir(path)
     files = glob.glob(os.path.abspath("*.wav"))
-    direct = os.path.abspath(os.path.join("../../data/", part))
+    direct = os.path.abspath(os.path.join("../../rnn/data/", part))
     for f in files:
       suf = f.split("/")[-1]
       print("moving", part, suf)
