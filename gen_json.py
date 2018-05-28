@@ -7,13 +7,14 @@ import wave
 import contextlib
 import soundfile as sf
 from shutil import copyfile
+from shutil import copy
 def gen_json():
   with open("vocab.json", encoding = "utf8") as v_file: 
     v = v_file.readline()
     vocab = json.loads(v)
-  partitions = ["test", "train", "dev"]
+  partitions = ["test", "dev", "train"]
   main_path = "./data_thchs30/"
-  sub_path = os.path.abspath("./")
+  jsons = []
   for part in partitions:
     path = os.path.abspath(os.path.join(main_path, part))
     os.chdir(path)
@@ -33,17 +34,15 @@ def gen_json():
         with open(abs_path, encoding = "utf8") as label_file:
           _ = label_file.readline()
           label = label_file.readline()[0:-1].split()
-          '''
-          for w in l:
-            if w == " " or w == "l" or w == "=": # error caused by data
-               continue
-            else:
-              label.append(vocab[w])
-          '''
       d["audio"] = audio_path
       d["text"] = label
       d["duration"] = duration
       js.append(d)
+    if part != "train":
+      jsons.append(js)
+    else:
+      js += jsons[0]
+      js += jsons[1]
       
     os.chdir(os.path.abspath("../../rnn/data/partitions"))
     with open(part + ".json", "w") as outfile:
@@ -52,10 +51,11 @@ def gen_json():
     os.chdir(os.path.abspath("../../../"))
 
 def move_data():
-  partitions = ["test", "train", "dev"]
+  partitions = ["test", "dev", "train"]
   main_path = "./data_thchs30/"
 
   for part in partitions:
+    
     path = os.path.abspath(os.path.join(main_path, part))
     os.chdir(path)
     files = glob.glob(os.path.abspath("*.wav"))
@@ -65,6 +65,26 @@ def move_data():
       print("moving", part, suf)
       copyfile(f, os.path.abspath(os.path.join(direct,suf)))
     os.chdir(os.path.abspath("../../"))
+    
+    if part == "train":
+      direct = os.path.abspath("./rnn/data/train")
+      os.chdir(os.path.abspath("./rnn/data/test"))
+      files = glob.glob(os.path.abspath("*.wav"))
+      for f in files:
+        suf = f.split("\\")[-1]
+        print("moving", part, suf)
+        copy(f, direct)
+      
+      os.chdir(os.path.abspath("../dev"))
+      files = glob.glob(os.path.abspath("*.wav"))
+      for f in files:
+        suf = f.split("\\")[-1]
+        print("moving", part, suf)
+        copy(f, direct)
+    os.chdir(os.path.abspath("../../../"))
+      
+      
+
       
 
 if __name__ == "__main__":
