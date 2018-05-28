@@ -82,80 +82,81 @@ def evaluate(model, ldr, preproc):
     return np.nanmean(losses), compute_wer(results)
     #return np.nanmean(losses)
 
-def main():
+def main(training=False, testing=False):
     with open("rnn/config.json", "r") as fid:                                                                                                                                                                                                                                      
         config = json.load(fid)
 
-    random.seed(config["seed"])
-    np.random.seed(config["seed"])
-    torch.manual_seed(config["seed"])
-    
-    use_cuda = torch.cuda.is_available()
-    if use_cuda:
-        torch.backends.cudnn.deterministic = True
-
-    print("Training RNN")
-    print("------------")
     data_cfg = config["data"]
     model_cfg = config["model"]
     opt_cfg = config["optimizer"]
-    
-    preproc = Preprocessor(data_cfg["train_set"], start_and_end=data_cfg["start_and_end"])
-    print("preprocessing finished")
-    
-    train_ldr = make_loader(data_cfg["train_set"], preproc, opt_cfg["batch_size"])
-    print("Train Loaded")
-    
-    dev_ldr = make_loader(data_cfg["dev_set"], preproc, opt_cfg["batch_size"])
-    print("Dev Loaded")
 
-    print("All Data Loaded")
+    preproc = Preprocessor(data_cfg["dev_set"], start_and_end=data_cfg["start_and_end"])
+    print("Preprocessing finished")
 
-    attention = Attention(model_cfg["encoder"]["hidden_size"], model_cfg["decoder"]["hidden_size"], 64)
-    model = Seq2Seq(preproc.input_dim, preproc.vocab_size, attention, model_cfg)
-    model = model.cuda() if use_cuda else model.cpu()
-
-    optimizer = torch.optim.SGD(model.parameters(), lr=opt_cfg["learning_rate"], momentum=opt_cfg["momentum"])
-
-    #print(model)
-    
-    log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} with {:6.2f}% WER ({:6.2f}s elapsed)"
-    #log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} ({:6.2f}s elapsed)"
-    
-
-    best_so_far = float("inf")
-    for ep in range(opt_cfg["max_epochs"]):
-        start = time.time()
+    if training:
+        random.seed(config["seed"])
+        np.random.seed(config["seed"])
+        torch.manual_seed(config["seed"])
         
-        train_loss = train(model, optimizer, train_ldr)    
-        dev_loss, dev_wer = evaluate(model, dev_ldr, preproc)
-        #dev_loss = evaluate(model, dev_ldr, preproc)        
+        use_cuda = torch.cuda.is_available()
+        if use_cuda:
+            torch.backends.cudnn.deterministic = True
+
+        print("Training RNN")
+        print("------------")
+             
+        train_ldr = make_loader(data_cfg["train_set"], preproc, opt_cfg["batch_size"])
+        print("Train Loaded")
         
-        #print(log.format(ep + 1, train_loss, dev_loss, dev_wer * 100., time.time() - start))
-        #print(log.format(ep + 1, train_loss, dev_loss, time.time() - start))
+        dev_ldr = make_loader(data_cfg["dev_set"], preproc, opt_cfg["batch_size"])
+        print("Dev Loaded")
+
+        print("All Data Loaded")
+
+        attention = Attention(model_cfg["encoder"]["hidden_size"], model_cfg["decoder"]["hidden_size"], 64)
+        model = Seq2Seq(preproc.input_dim, preproc.vocab_size, attention, model_cfg)
+        model = model.cuda() if use_cuda else model.cpu()
+
+        optimizer = torch.optim.SGD(model.parameters(), lr=opt_cfg["learning_rate"], momentum=opt_cfg["momentum"])
+
+        #print(model)
         
-        torch.save(model, os.path.join(config["save_path"], str(ep)))
-        
-        if dev_loss < best_so_far:
-            best_so_far = dev_loss
-            torch.save(model, os.path.join(config["save_path"], "best"))
+        log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} with {:6.2f}% WER ({:6.2f}s elapsed)"
+        #log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} ({:6.2f}s elapsed)"
+
+        best_so_far = float("inf")
+        for ep in range(opt_cfg["max_epochs"]):
+            start = time.time()
+            
+            train_loss = train(model, optimizer, train_ldr)    
+            dev_loss, dev_wer = evaluate(model, dev_ldr, preproc)
+            #dev_loss = evaluate(model, dev_ldr, preproc)        
+            
+            #print(log.format(ep + 1, train_loss, dev_loss, dev_wer * 100., time.time() - start))
+            #print(log.format(ep + 1, train_loss, dev_loss, time.time() - start))
+            
+            torch.save(model, os.path.join(config["save_path"], str(ep)))
+            
+            if dev_loss < best_so_far:
+                best_so_far = dev_loss
+                torch.save(model, os.path.join(config["save_path"], "best"))
+
+        print("")
 
     
     # Testing goes here:
-    print("\nTesting RNN")
-    print("-------------")
-    '''
-    preproc = Preprocessor(data_cfg["test_set"], start_and_end=data_cfg["start_and_end"])
-    print("preprocessing finished")
-    '''
-    test_model = torch.load(os.path.join(config["save_path"], "best"))
-    test_ldr = make_loader(data_cfg["test_set"], preproc, opt_cfg["batch_size"])
+    if testing:
+        print("Testing RNN")
+        print("-------------")
 
-    _, test_wer = evaluate(test_model, test_ldr, preproc)
-    #test_loss = evaluate(test_model, test_ldr, preproc)
+        test_model = torch.load(os.path.join(config["save_path"], "best"))
+        test_ldr = make_loader(data_cfg["test_set"], preproc, opt_cfg["batch_size"])
 
-    print("{:.2f}% WER (test)".format(test_wer * 100.))
-    #print("Test loss", test_loss)
+        _, test_wer = evaluate(test_model, test_ldr, preproc)
+        #test_loss = evaluate(test_model, test_ldr, preproc)
+
+        print("{:.2f}% WER (test)".format(test_wer * 100.))
+        #print("Test loss", test_loss)
     
 if __name__ == '__main__':
-    main()
+    main(training=False, testing=True)
