@@ -127,7 +127,7 @@ def main(training=False, testing=False):
             dev_loss, dev_wer = evaluate(model, dev_ldr, preproc)
             #dev_loss = evaluate(model, dev_ldr, preproc)        
             
-            #print(log.format(ep + 1, train_loss, dev_loss, dev_wer * 100., time.time() - start))
+            print(log.format(ep + 1, train_loss, dev_loss, dev_wer * 100., time.time() - start))
             #print(log.format(ep + 1, train_loss, dev_loss, time.time() - start))
             
             torch.save(model, os.path.join(config["save_path"], str(ep)))   
