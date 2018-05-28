@@ -7,9 +7,11 @@ import torch
 from torch import nn
 import editdistance
 import os
+import glob
 from rnn.loader import make_loader, Preprocessor
 from rnn.model import Seq2Seq
 from rnn.model import LinearND 
+from rnn.model import Attention
 
 np.seterr(divide='ignore') # masks log(0) errors
 
@@ -47,7 +49,7 @@ def train(model, optimizer, ldr):
         optimizer.step()
         losses.append(loss.data.item())
         
-    return np.mean(losses)
+    return np.nanmean(losses)
 
 def evaluate(model, ldr, preproc):
     """
@@ -76,8 +78,9 @@ def evaluate(model, ldr, preproc):
             refs.extend(labels)
 
     results = [(preproc.decode(r), preproc.decode(h)) for r, h in zip(refs, hyps)]
-    
-    return np.mean(losses), compute_wer(results)
+    #print(results)
+    return np.nanmean(losses), compute_wer(results)
+    #return np.nanmean(losses)
 
 def main():
     with open("rnn/config.json", "r") as fid:                                                                                                                                                                                                                                      
@@ -96,13 +99,19 @@ def main():
     data_cfg = config["data"]
     model_cfg = config["model"]
     opt_cfg = config["optimizer"]
-
-    preproc = Preprocessor(data_cfg["train_set"], start_and_end=data_cfg["start_and_end"])
-
-    train_ldr = make_loader(data_cfg["train_set"], preproc, opt_cfg["batch_size"])
+    '''
+    preproc = Preprocessor(data_cfg["dev_set"], start_and_end=data_cfg["start_and_end"])
+    print("preprocessing finished")
+    
+    train_ldr = make_loader(data_cfg["dev_set"], preproc, opt_cfg["batch_size"])
+    print("Train Loaded")
+    
     dev_ldr = make_loader(data_cfg["dev_set"], preproc, opt_cfg["batch_size"])
+    print("Dev Loaded")
 
-    attention = Attention(model_cfg["encoder"]["hidden_size"], model_cfg["decoder"]["hidden_size"])
+    print("All Data Loaded")
+
+    attention = Attention(model_cfg["encoder"]["hidden_size"], model_cfg["decoder"]["hidden_size"], 64)
     model = Seq2Seq(preproc.input_dim, preproc.vocab_size, attention, model_cfg)
     model = model.cuda() if use_cuda else model.cpu()
 
@@ -110,33 +119,41 @@ def main():
 
     #print(model)
     
-    log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} with {:6.2f}% WER ({:6.2f}s elapsed)"
+    #log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} with {:6.2f}% WER ({:6.2f}s elapsed)"
+    log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} ({:6.2f}s elapsed)"
+    
 
     best_so_far = float("inf")
     for ep in range(opt_cfg["max_epochs"]):
         start = time.time()
         
         train_loss = train(model, optimizer, train_ldr)    
-        dev_loss, dev_wer = evaluate(model, dev_ldr, preproc)
+        #dev_loss, dev_wer = evaluate(model, dev_ldr, preproc)
+        dev_loss = evaluate(model, dev_ldr, preproc)        
         
-        print(log.format(ep + 1, train_loss, dev_loss, dev_wer * 100., time.time() - start))
-    
+        #print(log.format(ep + 1, train_loss, dev_loss, dev_wer * 100., time.time() - start))
+        print(log.format(ep + 1, train_loss, dev_loss, time.time() - start))
+        
         torch.save(model, os.path.join(config["save_path"], str(ep)))
         
-        if dev_wer < best_so_far:
-            best_so_far = dev_wer
+        if dev_loss < best_so_far:
+            best_so_far = dev_loss
             torch.save(model, os.path.join(config["save_path"], "best"))
 
-
+    '''
     # Testing goes here:
     print("\nTesting RNN")
     print("-------------")
-    test_model = torch.load(os.path.join(config["save_path"], "best_0.8.16.0.5"))
+    preproc = Preprocessor(data_cfg["test_set"], start_and_end=data_cfg["start_and_end"])
+    print("preprocessing finished")
+    test_model = torch.load(os.path.join(config["save_path"], "best"))
     test_ldr = make_loader(data_cfg["test_set"], preproc, opt_cfg["batch_size"])
 
     _, test_wer = evaluate(test_model, test_ldr, preproc)
+    #test_loss = evaluate(test_model, test_ldr, preproc)
 
     print("{:.2f}% WER (test)".format(test_wer * 100.))
-
+    #print("Test loss", test_loss)
+    
 if __name__ == '__main__':
     main()
