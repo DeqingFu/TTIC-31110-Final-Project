@@ -13,7 +13,7 @@ def gen_json():
     vocab = json.loads(v)
   partitions = ["test", "train", "dev"]
   main_path = "./data_thchs30/"
-
+  sub_path = os.path.abspath("./")
   for part in partitions:
     path = os.path.abspath(os.path.join(main_path, part))
     os.chdir(path)
@@ -21,7 +21,8 @@ def gen_json():
     js = []
     for f in files:
       d = {}
-      audio_path = os.path.abspath(f)
+      suf = f.split("\\")[-1]
+      audio_path = os.path.join(os.path.join(os.path.abspath("../../rnn/data"), part), suf)
       audio = sf.SoundFile(audio_path)
       duration = int(10**6 * len(audio) / audio.samplerate)
       trn = os.path.abspath(f+ ".trn")
@@ -30,10 +31,10 @@ def gen_json():
         label_path = file.readline()[0:-1]
         abs_path = os.path.abspath(label_path)
         with open(abs_path, encoding = "utf8") as label_file:
-          l =label_file.readline()[0:-1]
+          l = label_file.readline()[0:-1]
           for w in l:
-            if w == " ":
-              continue
+            if w == " " or w == "l" or w == "=": # error caused by data
+               continue
             else:
               label.append(vocab[w])
       d["audio"] = audio_path
@@ -57,13 +58,13 @@ def move_data():
     files = glob.glob(os.path.abspath("*.wav"))
     direct = os.path.abspath(os.path.join("../../rnn/data/", part))
     for f in files:
-      suf = f.split("/")[-1]
+      suf = f.split("\\")[-1]
       print("moving", part, suf)
       copyfile(f, os.path.abspath(os.path.join(direct,suf)))
     os.chdir(os.path.abspath("../../"))
       
 
 if __name__ == "__main__":
+  #move_data()
   gen_json()
-  move_data()
 

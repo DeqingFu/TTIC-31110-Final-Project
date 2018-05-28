@@ -17,6 +17,8 @@ from collections import defaultdict
 from copy import deepcopy
 from glob import glob
 
+import librosa
+
 def pre_emphasis(x):
     """
     Applies pre-emphasis step to the signal.
@@ -152,7 +154,12 @@ def mel_filterbank(nfilters, fft_size, sample_rate):
 
     return filterbank.T / filterbank.sum(axis=1).clip(1e-16)
 
-def extract_mfcc_features(wav):
+def get_pitch(p, mag, t):
+  index = mag[:,t].argmax()
+  pitch = p[index, t]
+  return pitch
+
+def extract_features(wav, pitch = True, energy = True):
     """
     MFCC feature extraction.
     This function is concise representation of the process you started with above.
@@ -165,8 +172,10 @@ def extract_mfcc_features(wav):
     --------
     :return: normalized mfcc features (number of frames, number of cepstral coefficients)
     """
+    '''
+    #CODES PREVIDED BY KAREN
     signal, rate = sf.read(wav)
-
+    
     size = 128
     step = size // 2
     nfilters = 26
@@ -197,12 +206,46 @@ def extract_mfcc_features(wav):
 
     # keep only first 'ncoeffs' cepstral coefficients
     mfccs = mfccs[:,:ncoeffs]
+    print(np.shape(mfccs))
+    exit(0)
+    '''
+    #print(wav)
+    y, sr = librosa.load(wav)
+    ncoeffs = 13
+    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc= ncoeffs)
+    mfcc_delta = librosa.feature.delta(mfcc)
+    mfcc_features = np.vstack((mfcc, mfcc_delta))
 
-    return mfccs
+    pitch_features = None
+    if pitch == True:
+        p, mag = librosa.piptrack(y=y, sr=sr)
+        _, T = np.shape(p)
+        pitches = np.asarray(list(get_pitch(p, mag, t) for t in range(T)))
+        pitches_delta = librosa.feature.delta(pitches)
+        pitch_features = np.vstack((pitches, pitches_delta))
+    
+    energy_features = None
+    if energy == True:
+        energy_arr = librosa.feature.rmse(y=y)
+        energy_delta = librosa.feature.delta(energy_arr)
+        energy_features = np.vstack((energy_arr, energy_delta))
+    
+    #print(np.shape(mfcc_features))
+    #print(np.shape(pitch_features))
+    #print(np.shape(energy_features))
+    features = mfcc_features
+    if pitch == True:
+        features = np.vstack((features, pitch_features))
+        if energy == True:
+            features = np.vstack((features, energy_features))
+    #print(np.shape(features))
+    #exit()
+    return features.T
+    
 
 
 def compute_mean_std(wavfiles):
-    samples = np.vstack([extract_mfcc_features(wav) for wav in wavfiles])
+    samples = np.vstack([extract_features(wav) for wav in wavfiles])
     return samples.mean(axis=0), samples.std(axis=0)
 
 class Preprocessor():
@@ -255,7 +298,7 @@ class Preprocessor():
         return text[s:e]
 
     def preprocess(self, wav, text):
-        inputs = extract_mfcc_features(wav)
+        inputs = extract_features(wav)
         inputs = (inputs - self.mean) / self.std
         targets = self.encode(text)
         return inputs, targets
