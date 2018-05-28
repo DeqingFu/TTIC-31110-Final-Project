@@ -1,5 +1,4 @@
 {
-    "seed" : 273,
     "save_path" : "rnn/checkpoints",
 
     "data" : {
