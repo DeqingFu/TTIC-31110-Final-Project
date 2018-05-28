@@ -112,7 +112,7 @@ def main(training=False, testing=False):
         model = model.cuda() if use_cuda else model.cpu()
 
         optimizer = torch.optim.SGD(model.parameters(), lr=opt_cfg["learning_rate"], momentum=opt_cfg["momentum"])
-        mslst = [int(y) for y in [50 * (2 ** x) for x in range(11)] if y < opt_cfg["max_epochs"]]
+        mslst = [int(y) for y in [50 * (2 ** x) for x in range(20)] if y < opt_cfg["max_epochs"]]
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=mslst, gamma=0.1)
         
         log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} with {:6.2f}% WER ({:6.2f}s elapsed)"
@@ -128,6 +128,8 @@ def main(training=False, testing=False):
             #dev_loss = evaluate(model, dev_ldr, preproc)        
             
             print(log.format(ep + 1, train_loss, dev_loss, dev_wer * 100., time.time() - start))
+            for param_group in optimizer.param_groups:
+                print('...learning rate: ' + str(param_group['lr']))
             #print(log.format(ep + 1, train_loss, dev_loss, time.time() - start))
             
             torch.save(model, os.path.join(config["save_path"], str(ep)))   
