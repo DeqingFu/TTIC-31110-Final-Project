@@ -90,7 +90,7 @@ def main(training=False, testing=False):
     model_cfg = config["model"]
     opt_cfg = config["optimizer"]
 
-    preproc = Preprocessor(data_cfg["train_set"], start_and_end=data_cfg["start_and_end"])
+    preproc = Preprocessor(data_cfg["dev_set"], start_and_end=data_cfg["start_and_end"])
     print("Preprocessing finished")
 
     if training:     
@@ -101,7 +101,7 @@ def main(training=False, testing=False):
         print("Training RNN")
         print("------------")
              
-        train_ldr = make_loader(data_cfg["train_set"], preproc, opt_cfg["batch_size"])
+        train_ldr = make_loader(data_cfg["dev_set"], preproc, opt_cfg["batch_size"])
         print("Train Loaded")       
         dev_ldr = make_loader(data_cfg["dev_set"], preproc, opt_cfg["batch_size"])
         print("Dev Loaded")

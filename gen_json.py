@@ -31,12 +31,15 @@ def gen_json():
         label_path = file.readline()[0:-1]
         abs_path = os.path.abspath(label_path)
         with open(abs_path, encoding = "utf8") as label_file:
-          l = label_file.readline()[0:-1]
+          _ = label_file.readline()
+          label = label_file.readline()[0:-1].split()
+          '''
           for w in l:
             if w == " " or w == "l" or w == "=": # error caused by data
                continue
             else:
               label.append(vocab[w])
+          '''
       d["audio"] = audio_path
       d["text"] = label
       d["duration"] = duration
