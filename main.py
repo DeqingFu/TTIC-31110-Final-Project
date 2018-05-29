@@ -12,6 +12,7 @@ from rnn.loader import make_loader, Preprocessor
 from rnn.model import Seq2Seq
 from rnn.model import LinearND 
 from rnn.model import Attention
+import matplotlib.pyplot as plt
 
 np.seterr(divide='ignore') # masks log(0) errors
 
@@ -89,22 +90,21 @@ def main(training=False, testing=False):
     data_cfg = config["data"]
     model_cfg = config["model"]
     opt_cfg = config["optimizer"]
-
-    preproc = Preprocessor(data_cfg["dev_set"], start_and_end=data_cfg["start_and_end"])
-    print("Preprocessing finished")
-
-    if training:     
-        use_cuda = torch.cuda.is_available()
-        if use_cuda:
-            torch.backends.cudnn.deterministic = True
-
+    start = time.time()
+    preproc = Preprocessor(data_cfg["train_set"], start_and_end=data_cfg["start_and_end"])
+    print("Preprocessing finished", time.time() - start, "seconds elapsed")
+    use_cuda = torch.cuda.is_available()
+    if use_cuda:
+        torch.backends.cudnn.deterministic = True
+    if training:
         print("Training RNN")
         print("------------")
-             
-        train_ldr = make_loader(data_cfg["dev_set"], preproc, opt_cfg["batch_size"])
-        print("Train Loaded")       
+        start = time.time()
+        train_ldr = make_loader(data_cfg["train_set"], preproc, opt_cfg["batch_size"])
+        print("Train Loaded", time.time() - start, "seconds elapsed")   
+        start = time.time()    
         dev_ldr = make_loader(data_cfg["dev_set"], preproc, opt_cfg["batch_size"])
-        print("Dev Loaded")
+        print("Dev Loaded", time.time() - start, "seconds elapsed")
         print("All Data Loaded")
 
         attention = Attention(model_cfg["encoder"]["hidden_size"], model_cfg["decoder"]["hidden_size"], 64)
@@ -112,12 +112,14 @@ def main(training=False, testing=False):
         model = model.cuda() if use_cuda else model.cpu()
 
         optimizer = torch.optim.SGD(model.parameters(), lr=opt_cfg["learning_rate"], momentum=opt_cfg["momentum"])
-        mslst = [int(y) for y in [50 * (2 ** x) for x in range(20)] if y < opt_cfg["max_epochs"]]
+        mslst = [int(y) for y in [100 * x for x in range(1,20)] if y < opt_cfg["max_epochs"]]
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=mslst, gamma=0.1)
         
         log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} with {:6.2f}% WER ({:6.2f}s elapsed)"
         #log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} ({:6.2f}s elapsed)"
-
+        losses = []
+        weres = []
+        eps = list(range(opt_cfg["max_epochs"]))
         best_so_far = float("inf")
         for ep in range(opt_cfg["max_epochs"]):
             start = time.time()
@@ -125,6 +127,8 @@ def main(training=False, testing=False):
 
             train_loss = train(model, optimizer, train_ldr)    
             dev_loss, dev_wer = evaluate(model, dev_ldr, preproc)
+            losses.append(dev_loss)
+            weres.append(dev_wer)
             #dev_loss = evaluate(model, dev_ldr, preproc)        
             
             print(log.format(ep + 1, train_loss, dev_loss, dev_wer * 100., time.time() - start))
@@ -136,7 +140,9 @@ def main(training=False, testing=False):
             if dev_loss < best_so_far:
                 best_so_far = dev_loss
                 torch.save(model, os.path.join(config["save_path"], "best"))
-
+        plt.plot(eps, losses)
+        plt.plot(eps, weres)
+        plt.show()
     if training and testing:
         print("")
     
@@ -146,7 +152,9 @@ def main(training=False, testing=False):
         print("-------------")
 
         test_model = torch.load(os.path.join(config["save_path"], "best"))
+        start = time.time()
         test_ldr = make_loader(data_cfg["test_set"], preproc, opt_cfg["batch_size"])
+        print("Test Loaded", time.time() - start, "seconds elapsed")
 
         _, test_wer = evaluate(test_model, test_ldr, preproc)
         #test_loss = evaluate(test_model, test_ldr, preproc)
@@ -158,4 +166,4 @@ def main(training=False, testing=False):
     print("done")
     
 if __name__ == '__main__':
-    main(training=True, testing=True)
+    main(training=False, testing=True)
