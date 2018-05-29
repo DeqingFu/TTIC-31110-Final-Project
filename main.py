@@ -52,7 +52,7 @@ def train(model, optimizer, ldr):
         
     return np.nanmean(losses)
 
-def evaluate(model, ldr, preproc):
+def evaluate(model, ldr, preproc, store_prediction=False, print_prediction=False):
     """
     Evaluate the model (on either dev or test).
     ----
@@ -79,9 +79,22 @@ def evaluate(model, ldr, preproc):
             refs.extend(labels)
 
     results = [(preproc.decode(r), preproc.decode(h)) for r, h in zip(refs, hyps)]
-    #print(results)
+    
+    if store_prediction:
+        with open("test_results.json", "w") as res:
+            json.dump(results, res)
+
+    if print_prediction:
+        for (truth, pred) in results:
+            print('True label:\n  ', end="")
+            for char in truth:
+                print(char, end=" ")
+            print('\nPredicted labal:\n  ', end="")
+            for char in pred:
+                print(char, end=" ")
+            print('')
+
     return np.nanmean(losses), compute_wer(results)
-    #return np.nanmean(losses)
 
 def main(training=False, testing=False):
     with open("rnn/config.json", "r") as fid:                                                                                                                                                                                                                                      
@@ -112,7 +125,7 @@ def main(training=False, testing=False):
         model = model.cuda() if use_cuda else model.cpu()
 
         optimizer = torch.optim.SGD(model.parameters(), lr=opt_cfg["learning_rate"], momentum=opt_cfg["momentum"])
-        mslst = [int(y) for y in [100 * x for x in range(1,20)] if y < opt_cfg["max_epochs"]]
+        mslst = [int(y) for y in [25 * x for x in range(1,20)] if y < opt_cfg["max_epochs"]]
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=mslst, gamma=0.1)
         
         log="epoch {:4} | train_loss={:6.2f}, dev_loss={:6.2f} with {:6.2f}% WER ({:6.2f}s elapsed)"
@@ -138,7 +151,7 @@ def main(training=False, testing=False):
             
             torch.save(model, os.path.join(config["save_path"], str(ep)))   
             if dev_loss < best_so_far:
-                best_so_far = dev_loss
+                best_so_far = dev_wer
                 torch.save(model, os.path.join(config["save_path"], "best"))
         plt.plot(eps, losses)
         plt.plot(eps, weres)
@@ -156,7 +169,7 @@ def main(training=False, testing=False):
         test_ldr = make_loader(data_cfg["test_set"], preproc, opt_cfg["batch_size"])
         print("Test Loaded", time.time() - start, "seconds elapsed")
 
-        _, test_wer = evaluate(test_model, test_ldr, preproc)
+        _, test_wer = evaluate(test_model, test_ldr, preproc, True, True)
         #test_loss = evaluate(test_model, test_ldr, preproc)
 
         print("{:.2f}% WER (test)".format(test_wer * 100.))

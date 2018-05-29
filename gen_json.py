@@ -65,7 +65,7 @@ def move_data():
       print("moving", part, suf)
       copyfile(f, os.path.abspath(os.path.join(direct,suf)))
     os.chdir(os.path.abspath("../../"))
-    
+    '''
     if part == "train":
       direct = os.path.abspath("./rnn/data/train")
       os.chdir(os.path.abspath("./rnn/data/test"))
@@ -82,12 +82,13 @@ def move_data():
         print("moving", part, suf)
         copy(f, direct)
     os.chdir(os.path.abspath("../../../"))
+    '''
       
       
 
       
 
 if __name__ == "__main__":
-  #move_data()
+  move_data()
   gen_json()
 
