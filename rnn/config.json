@@ -2,6 +2,7 @@
     "save_path" : "rnn/checkpoints",
 
     "data" : {
+        "all_data":"rnn/data/partitions/data.json",
         "train_set" : "rnn/data/partitions/train.json",
         "dev_set" : "rnn/data/partitions/dev.json",
         "test_set" : "rnn/data/partitions/test.json",
@@ -10,21 +11,21 @@
 
     "optimizer" : {
         "batch_size" : 32,
-        "max_epochs" : 500,
-        "learning_rate" : 0.001,
-        "momentum" : 0.0
+        "max_epochs" : 30,
+        "learning_rate" : 0.1,
+        "momentum" : 0.9
     },
 
     "model" : {
         "sample_prob" : 0.8,
         "encoder" : {
-            "hidden_size" : 256,
+            "hidden_size" : 512,
             "num_layers" : 3,
             "dropout": 0
         },
         "decoder" : {
-            "input_size" : 256,
-            "hidden_size": 256,
+            "input_size" : 512,
+            "hidden_size": 512,
             "num_layers" : 3
         }
     }
