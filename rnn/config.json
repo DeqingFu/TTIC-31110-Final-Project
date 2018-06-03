@@ -19,13 +19,13 @@
     "model" : {
         "sample_prob" : 0.8,
         "encoder" : {
-            "hidden_size" : 768,
+            "hidden_size" : 512,
             "num_layers" : 3,
             "dropout": 0.1
         },
         "decoder" : {
-            "input_size" : 768,
-            "hidden_size": 768,
+            "input_size" : 512,
+            "hidden_size": 512,
             "num_layers" : 1
         }
     }
