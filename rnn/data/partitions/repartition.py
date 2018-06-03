@@ -45,10 +45,11 @@ def assign(numL):
 				res[i] = which
 
 	while True:
-		for _ in range(8):
+		for _ in range(7):
 			assignTo(0)
 		assignTo(1)
-		assignTo(2)
+		for _ in range(2):
+			assignTo(2)
 		if numAssgn == numL:
 			break
 
