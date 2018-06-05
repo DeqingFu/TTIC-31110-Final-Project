@@ -1,79 +1,61 @@
-def _toWER(eqFunction, results):
+import editdistance
+
+def _toWER(process, results):
     '''
     Computes WER according to the equal function
     --------------------------------------------
-    input: equal function and results
+    input: rocess function and results
     output: WER
     '''
     dist = 0.
     for label, pred in results:
-        dist += _levenshtein(label, pred, eqFunction)
+        dist += editdistance.eval(list(map(lambda x : process(x), label)), list(map(lambda x : process(x), pred)))
     total = sum(len(label) for label, _ in results)
-    return dist / total
+    return dist / total, dist 
 
 
-def _levenshtein(s1, s2, eqFunction):
-    '''
-    Levenshtein distance credit to Wikipedia
-    ----------------------------------------
-    input: two strings and a equal function
-    output: Levenshtein distance
-    '''
-    if len(s1) < len(s2):
-        return _levenshtein(s2, s1, eqFunction)
-
-    # len(s1) >= len(s2)
-    if len(s2) == 0:
-        return len(s1)
-
-    previous_row = range(len(s2) + 1)
-    for i, c1 in enumerate(s1):
-        current_row = [i + 1]
-        for j, c2 in enumerate(s2):
-            insertions = previous_row[j + 1] + 1
-            deletions = current_row[j] + 1
-            substitutions = previous_row[j] + (0 if eqFunction(c1, c2) else 1)
-            current_row.append(min(insertions, deletions, substitutions))
-        previous_row = current_row
-    
-    return previous_row[-1]
+def _noTone(s1):
+    return ''.join(list(map(lambda x : x if x.islower() else '', s1)))
 
 
-def _eqNoTone(c1, c2):
-    tmp1 = ''.join(list(map(lambda x : x if x.islower() else '', c1)))
-    tmp2 = ''.join(list(map(lambda x : x if x.islower() else '', c2)))
-    return tmp1 == tmp2
-
-
-def _eqPingQiaoShe(c1, c2):
-    tmp1 = c1
-    tmp2 = c2
+def _pingQiaoShe(s1):
+    tmp1 = ''.join(list(map(lambda x : x if x.islower() else '', s1)))
     fromLst = ['sh', 'zh', 'ch']
     toLst = ['s', 'z', 'c']
-    for i in range(3):
+    for i in range(len(fromLst)):
         tmp1 = tmp1.replace(fromLst[i], toLst[i])
-        tmp2 = tmp2.replace(fromLst[i], toLst[i])
-    return tmp1 == tmp2
+    return tmp1
 
 
-def _eqQianHouBi(c1, c2):
-    tmp1 = c1
-    tmp2 = c2
+def _qianHouBi(s1):
+    tmp1 = ''.join(list(map(lambda x : x if x.islower() else '', s1)))
     fromLst = ['ang', 'eng', 'ing']
     toLst = ['an', 'en', 'in']
-    for i in range(3):
+    for i in range(len(fromLst)):
         tmp1 = tmp1.replace(fromLst[i], toLst[i])
-        tmp2 = tmp2.replace(fromLst[i], toLst[i])
-    return tmp1 == tmp2
+    return tmp1
+
+
+def _moHu(s1):
+    tmp1 = ''.join(list(map(lambda x : x if x.islower() else '', s1)))
+    fromLst = ['sh', 'zh', 'ch', 'ang', 'eng', 'ing']
+    toLst = ['s', 'z', 'c', 'an', 'en', 'in']
+    for i in range(len(fromLst)):
+        tmp1 = tmp1.replace(fromLst[i], toLst[i])
+    return tmp1
 
 
 def compute_wer_notone(results):
-    return _toWER(_eqNoTone, results)
+    return _toWER(_noTone, results)
 
 
 def compute_wer_pingqiaoshe(results):
-    return _toWER(_eqPingQiaoShe, results)
+    return _toWER(_pingQiaoShe, results)
 
 
 def compute_wer_qianhoubi(results):
-    return _toWER(_eqQianHouBi, results)
+    return _toWER(_qianHouBi, results)
+
+
+def compute_wer_mohu(results):
+    return _toWER(_moHu, results)
