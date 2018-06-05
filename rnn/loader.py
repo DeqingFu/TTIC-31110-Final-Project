@@ -159,7 +159,7 @@ def get_pitch(p, mag, t):
   pitch = p[index, t]
   return pitch
 
-def extract_features(wav, pitch = True, energy = True):
+def extract_features(wav, pitch = False, energy = False):
     """
     MFCC feature extraction.
     This function is concise representation of the process you started with above.
@@ -236,8 +236,9 @@ def extract_features(wav, pitch = True, energy = True):
     features = mfcc_features
     if pitch == True:
         features = np.vstack((features, pitch_features))
-        if energy == True:
-            features = np.vstack((features, energy_features))
+    if energy == True:
+        features = np.vstack((features, energy_features))
+    
     #print(np.shape(features))
     #exit()
     return features.T
@@ -284,6 +285,7 @@ class Preprocessor():
         text = list(text)
         if self.start_and_end:
             text = [self.START] + text + [self.END]
+        #print([self.char_to_int[t] for t in text])
         return [self.char_to_int[t] for t in text]
 
     def decode(self, seq):
